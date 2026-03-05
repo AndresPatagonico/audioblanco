@@ -1,98 +1,189 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Audio, AVPlaybackSource } from 'expo-av';
+import { Ionicons } from '@expo/vector-icons';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
+function PantallaBienvenida() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.contenedorSplash}>
+      <Image 
+        source={require('../../assets/Chihuahuas_Antes_y_Despues.jpeg')} 
+        style={styles.imagenSplash}
+        resizeMode="contain" 
+      />
+      <StatusBar style="light" />
+    </View>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+function ReproductorSonido({ titulo, archivoAudio, icono }: { titulo: string, archivoAudio: AVPlaybackSource, icono: any }) {
+  const [sonido, setSonido] = useState<Audio.Sound>();
+  const [estaReproduciendo, setEstaReproduciendo] = useState(false);
+
+  async function reproducirAudio() {
+    if (!sonido) {
+      const { sound } = await Audio.Sound.createAsync(archivoAudio);
+      setSonido(sound);
+      await sound.playAsync();
+      setEstaReproduciendo(true);
+    } else {
+      await sonido.playAsync();
+      setEstaReproduciendo(true);
+    }
+  }
+
+  async function pausarAudio() {
+    if (sonido) {
+      await sonido.pauseAsync();
+      setEstaReproduciendo(false);
+    }
+  }
+
+  async function detenerAudio() {
+    if (sonido) {
+      await sonido.stopAsync();
+      setEstaReproduciendo(false);
+    }
+  }
+
+  useEffect(() => {
+    return sonido ? () => { sonido.unloadAsync(); } : undefined;
+  }, [sonido]);
+
+  return (
+    <View style={styles.tarjetaReproductor}>
+      <View style={styles.encabezadoTarjeta}>
+        <View style={styles.circuloIcono}>
+          <Ionicons name={icono} size={24} color="#38BDF8" />
+        </View>
+        <Text style={styles.texto}>{titulo}</Text>
+      </View>
+      <View style={styles.filaBotones}>
+        {!estaReproduciendo ? (
+          <TouchableOpacity style={styles.botonPrincipal} onPress={reproducirAudio}>
+            <Ionicons name="play" size={28} color="#0F172A" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.botonPrincipal} onPress={pausarAudio}>
+            <Ionicons name="pause" size={28} color="#0F172A" />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.botonSecundario} onPress={detenerAudio}>
+          <Ionicons name="stop" size={24} color="#94A3B8" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+export default function Index() {
+  const [mostrarSplash, setMostrarSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMostrarSplash(false);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (mostrarSplash) {
+    return <PantallaBienvenida />;
+  }
+
+  return (
+    <ScrollView style={styles.fondoGlobal} contentContainerStyle={styles.contenedor}>
+      <Text style={styles.tituloPrincipal}>mySonidos</Text>
+      <ReproductorSonido titulo="🌊 Mar" archivoAudio={require('../../assets/SantaClaraDelMar.mp3')} icono="water" />
+      <ReproductorSonido titulo="🌧️ Lluvia 2 horas" archivoAudio={require('../../assets/Lluvia.mp3')} icono="rainy" />
+      <ReproductorSonido titulo="🌧️ Otra lluvia 2 horas" archivoAudio={require('../../assets/Lluvia2-2Horas.mp3')} icono="rainy" />
+      <StatusBar style="light" />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  contenedorSplash: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  imagenSplash: {
+    width: '80%',
+    height: '60%',
+  },
+  fondoGlobal: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
+  contenedor: {
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  tituloPrincipal: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginBottom: 35,
+    letterSpacing: 1,
+  },
+  tarjetaReproductor: {
+    backgroundColor: '#1E293B',
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 20,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  encabezadoTarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 20,
+    gap: 15,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  circuloIcono: {
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    padding: 10,
+    borderRadius: 15,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  texto: {
+    fontSize: 19,
+    fontWeight: '600',
+    color: '#F1F5F9',
   },
+  filaBotones: {
+    flexDirection: 'row',
+    gap: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  botonPrincipal: {
+    backgroundColor: '#38BDF8',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  botonSecundario: {
+    backgroundColor: '#334155',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
 });

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "reproductor-playa",
+    "name": "reproductor-myAudio",
     "slug": "reproductor-playa",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.andrespatagonico.reproductoraudio"
     },
     "web": {
       "output": "static",
@@ -43,6 +44,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "51c7c0d9-2bee-41c3-ab1d-f44ba1603bb7"
+      }
     }
   }
 }
