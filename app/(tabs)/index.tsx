@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image } from 'rea
 import { useState, useEffect } from 'react';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 
 // --- PANTALLA DE BIENVENIDA ---
 function PantallaBienvenida() {
@@ -204,6 +205,15 @@ export default function Index() {
           })}
         </View>
       </View>
+
+        {/* --- PUBLICIDAD ADMOB --- */}
+        <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
+          <BannerAd
+            unitId={'ca-app-pub-5520020338893290/5303857864'}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+          />
+        </View>
 
       <StatusBar style="light" />
     </ScrollView>
