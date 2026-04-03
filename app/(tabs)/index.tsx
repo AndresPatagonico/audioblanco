@@ -27,7 +27,6 @@ const PISTAS = [
 ];
 
 const TIEMPOS_TEMPORIZADOR = [
-  { label: '1 min', minutos: 1 },
   { label: '15 min', minutos: 15 },
   { label: '30 min', minutos: 30 },
   { label: '1 hora', minutos: 60 },
