@@ -23,10 +23,11 @@ function PantallaBienvenida() {
 const PISTAS = [
   { id: '1', titulo: '🌊 Mar', archivo: require('../../assets/SantaClaraDelMar.mp3'), icono: 'water' },
   { id: '2', titulo: '🌧️ Lluvia', archivo: require('../../assets/Lluvia.mp3'), icono: 'rainy' },
-  { id: '3', titulo: '🌧️ Lluvia 2', archivo: require('../../assets/Lluvia2-2Horas.mp3'), icono: 'rainy' },
+  { id: '3', titulo: '🌧️ Más lluvia ', archivo: require('../../assets/Lluvia2-2Horas.mp3'), icono: 'rainy' },
 ];
 
 const TIEMPOS_TEMPORIZADOR = [
+  { label: '1 min', minutos: 1 },
   { label: '15 min', minutos: 15 },
   { label: '30 min', minutos: 30 },
   { label: '1 hora', minutos: 60 },
@@ -67,7 +68,8 @@ export default function Index() {
     } 
     // Si llega a cero, detenemos el audio y reiniciamos el temporizador
     else if (tiempoRestanteMs !== null && tiempoRestanteMs <= 0 && estaReproduciendo) {
-      detenerAudio();
+      //detenerAudio();
+      pausarAudio();
       setMinutosTemporizador(null);
       setTiempoRestanteMs(null);
     }
@@ -231,7 +233,6 @@ const formatearTiempo = (milisegundos: number) => {
       </View>
 
         {/* --- PUBLICIDAD ADMOB --- */}
-        {/* */}
         <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
           <BannerAd
             unitId={'ca-app-pub-5520020338893290/5303857864'}
@@ -239,8 +240,6 @@ const formatearTiempo = (milisegundos: number) => {
             requestOptions={{ requestNonPersonalizedAdsOnly: true }}
           />
         </View>
-        {/* */}
-
       <StatusBar style="light" />
     </ScrollView>
   );
