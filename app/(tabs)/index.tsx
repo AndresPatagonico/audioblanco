@@ -44,6 +44,7 @@ export default function Index() {
   const [duracion, setDuracion] = useState(0);
   
   const [minutosTemporizador, setMinutosTemporizador] = useState<number | null>(null);
+  const [tiempoRestanteMs, setTiempoRestanteMs] = useState<number | null>(null);
 
   useEffect(() => {
     Audio.setAudioModeAsync({
@@ -56,40 +57,66 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    let timerApagado: NodeJS.Timeout;
-    if (estaReproduciendo && minutosTemporizador !== null) {
-      timerApagado = setTimeout(() => {
-        detenerAudio();
-        setMinutosTemporizador(null);
-      }, minutosTemporizador * 60 * 1000);
+    let intervalo: NodeJS.Timeout;
+
+    // Si está reproduciendo y hay tiempo restante, descontamos 1000 ms (1 segundo)
+    if (estaReproduciendo && tiempoRestanteMs !== null && tiempoRestanteMs > 0) {
+      intervalo = setInterval(() => {
+        setTiempoRestanteMs((prev) => (prev !== null ? prev - 1000 : null));
+      }, 1000);
+    } 
+    // Si llega a cero, detenemos el audio y reiniciamos el temporizador
+    else if (tiempoRestanteMs !== null && tiempoRestanteMs <= 0 && estaReproduciendo) {
+      detenerAudio();
+      setMinutosTemporizador(null);
+      setTiempoRestanteMs(null);
     }
-    return () => clearTimeout(timerApagado);
-  }, [estaReproduciendo, minutosTemporizador]);
+
+    return () => clearInterval(intervalo);
+  }, [estaReproduciendo, tiempoRestanteMs]);
 
   useEffect(() => {
     return sonido ? () => { sonido.unloadAsync(); } : undefined;
   }, [sonido]);
 
-  const formatearTiempo = (milisegundos: number) => {
-    if (!milisegundos) return '00:00';
-    const horas = Math.floor(milisegundos / 3600000);
-    const minutos = Math.floor((milisegundos % 3600000) / 60000);
-    const segundos = Math.floor((milisegundos % 60000) / 1000);
-    const h = horas > 0 ? `${horas}:` : '';
-    const m = minutos < 10 ? `0${minutos}` : minutos;
-    const s = segundos < 10 ? `0${segundos}` : segundos;
-    return `${h}${m}:${s}`;
-  };
+async function reproducirSeleccion(pista: any) {
+    // Si tocamos el mismo sonido que ya está activo (Pausa o Reanuda)
+    if (pistaActiva.id === pista.id) {
+      if (estaReproduciendo) {
+        pausarAudio();
+      } else {
+        reproducirAudio();
+      }
+      return;
+    }
 
-  async function cambiarPista(nuevaPista: any) {
+    // Si elegimos un sonido nuevo (Detiene el anterior y arranca el nuevo)
     if (sonido) {
       await sonido.stopAsync();
       await sonido.unloadAsync();
       setSonido(undefined);
     }
-    setPistaActiva(nuevaPista);
-    setEstaReproduciendo(false);
+    
+    setPistaActiva(pista);
     setPosicion(0);
+
+    const { sound } = await Audio.Sound.createAsync(
+      pista.archivo,
+      { shouldPlay: true },
+      (estado) => {
+        if (estado.isLoaded) {
+          setPosicion(estado.positionMillis);
+          setDuracion(estado.durationMillis || 0);
+          if (estado.didJustFinish) {
+            setEstaReproduciendo(false);
+            setPosicion(0);
+            sound.setPositionAsync(0);
+          }
+        }
+      }
+    );
+    setSonido(sound);
+    setEstaReproduciendo(true);
   }
 
   async function reproducirAudio() {
@@ -131,19 +158,30 @@ export default function Index() {
 
   if (mostrarSplash) { return <PantallaBienvenida />; }
 
+const formatearTiempo = (milisegundos: number) => {
+    if (!milisegundos) return '00:00';
+    const horas = Math.floor(milisegundos / 3600000);
+    const minutos = Math.floor((milisegundos % 3600000) / 60000);
+    const segundos = Math.floor((milisegundos % 60000) / 1000);
+    const h = horas > 0 ? `${horas}:` : '';
+    const m = minutos < 10 ? `0${minutos}` : minutos;
+    const s = segundos < 10 ? `0${segundos}` : segundos;
+    return `${h}${m}:${s}`;
+  };
+
   return (
     <ScrollView style={styles.fondoGlobal} contentContainerStyle={styles.contenedor}>
       <Text style={styles.tituloPrincipal}>Relax Descansar</Text>
 
       <View style={styles.seccion}>
-        <Text style={styles.tituloSeccion}>Seleccioná un sonido</Text>
+        <Text style={styles.tituloSeccion}>Escuchando ahora</Text>
         {PISTAS.map((pista) => {
           const esActiva = pistaActiva.id === pista.id;
           return (
             <TouchableOpacity 
               key={pista.id} 
               style={[styles.itemPlaylist, esActiva && styles.itemPlaylistActivo]}
-              onPress={() => cambiarPista(pista)}
+              onPress={() => reproducirSeleccion(pista)}
             >
               <View style={styles.iconoPlaylist}>
                 <Ionicons name={pista.icono as any} size={20} color={esActiva ? "#38BDF8" : "#94A3B8"} />
@@ -157,36 +195,8 @@ export default function Index() {
         })}
       </View>
 
-      <View style={styles.tarjetaReproductor}>
-        <Text style={styles.tituloReproduciendo}>Escuchando ahora:</Text>
-        <Text style={styles.nombrePistaActiva}>{pistaActiva.titulo}</Text>
-
-        <View style={styles.contenedorProgreso}>
-          <Text style={styles.textoTiempo}>{formatearTiempo(posicion)}</Text>
-          <View style={styles.barraFondo}>
-            <View style={[styles.barraActiva, { width: `${porcentajeAvance}%` }]} />
-          </View>
-          <Text style={styles.textoTiempo}>{formatearTiempo(duracion)}</Text>
-        </View>
-
-        <View style={styles.filaBotones}>
-          {!estaReproduciendo ? (
-            <TouchableOpacity style={styles.botonPrincipal} onPress={reproducirAudio}>
-              <Ionicons name="play" size={28} color="#0F172A" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.botonPrincipal} onPress={pausarAudio}>
-              <Ionicons name="pause" size={28} color="#0F172A" />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.botonSecundario} onPress={detenerAudio}>
-            <Ionicons name="stop" size={24} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <View style={styles.seccion}>
-        <Text style={styles.tituloSeccion}>Apagar en...</Text>
+        <Text style={styles.tituloSeccion}>Tiempo de relajación...</Text>
         <View style={styles.grillaTemporizador}>
           {TIEMPOS_TEMPORIZADOR.map((tiempo) => {
             const estaSeleccionado = minutosTemporizador === tiempo.minutos;
@@ -194,7 +204,15 @@ export default function Index() {
               <TouchableOpacity 
                 key={tiempo.minutos}
                 style={[styles.botonTiempo, estaSeleccionado && styles.botonTiempoActivo]}
-                onPress={() => setMinutosTemporizador(estaSeleccionado ? null : tiempo.minutos)}
+                onPress={() => {
+                  if (estaSeleccionado) {
+                    setMinutosTemporizador(null);
+                    setTiempoRestanteMs(null); // Apaga el reloj si se deselecciona
+                  } else {
+                    setMinutosTemporizador(tiempo.minutos);
+                    setTiempoRestanteMs(tiempo.minutos * 60 * 1000); // Le manda los minutos en milisegundos al reloj
+                  }
+                }}
               >
                 <Ionicons name="timer-outline" size={18} color={estaSeleccionado ? "#0F172A" : "#94A3B8"} />
                 <Text style={[styles.textoTiempoBoton, estaSeleccionado && styles.textoTiempoBotonActivo]}>
@@ -204,9 +222,16 @@ export default function Index() {
             )
           })}
         </View>
+        {/* Este es el Reloj Regresivo. Solo aparece si seleccionaste un tiempo */}
+        {tiempoRestanteMs !== null && (
+          <Text style={styles.relojGigante}>
+            {formatearTiempo(tiempoRestanteMs)}
+          </Text>
+        )}
       </View>
 
         {/* --- PUBLICIDAD ADMOB --- */}
+        {/* */}
         <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
           <BannerAd
             unitId={'ca-app-pub-5520020338893290/5303857864'}
@@ -214,6 +239,7 @@ export default function Index() {
             requestOptions={{ requestNonPersonalizedAdsOnly: true }}
           />
         </View>
+        {/* */}
 
       <StatusBar style="light" />
     </ScrollView>
@@ -247,5 +273,13 @@ const styles = StyleSheet.create({
   botonTiempo: { flexBasis: '48%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E293B', padding: 15, borderRadius: 12, gap: 8 },
   botonTiempoActivo: { backgroundColor: '#38BDF8' },
   textoTiempoBoton: { color: '#94A3B8', fontWeight: '600', fontSize: 15 },
-  textoTiempoBotonActivo: { color: '#0F172A', fontWeight: '800' }
+  textoTiempoBotonActivo: { color: '#0F172A', fontWeight: '800' },
+  relojGigante: { 
+    fontSize: 48, 
+    fontWeight: '800', 
+    color: '#38BDF8', 
+    textAlign: 'center', 
+    marginTop: 25,
+    letterSpacing: 2
+  }
 });
